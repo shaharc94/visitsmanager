@@ -102,10 +102,10 @@
     <div id="mainContent"></div> <!-- הצגת הנתונים כברירת מחדל -->
   </div>
 
-  <!-- מודל לעריכת פעילות -->
+  <!-- מודל לעריכת פרטי מוסד -->
   <div id="editModal" class="modal">
     <div class="modal-content">
-      <h2>עריכת פעילות</h2>
+      <h2>עריכת מוסד רפואי</h2>
       <div class="form-group" id="editForm"></div>
     </div>
   </div>
@@ -243,6 +243,7 @@
             <p>מוביל קשר: ${inst.leadContact}</p>
             <p>טלפון: ${inst.phone}</p>
             <button class="btn" onclick="showActivities(${i})">צפה בפעילויות</button>
+            ${isAdmin ? `<button class="btn btn-edit" onclick="showEditInstitution(${i})">ערוך פרטי מוסד</button>` : ''}
             ${isAdmin ? `<button class="btn btn-delete" onclick="deleteInstitution(${i})">מחק מוסד</button>` : ''}
           </div>
         `;
@@ -251,49 +252,50 @@
       content.innerHTML = html;
     }
 
-    // פונקציה חסרה showActivities
-    function showActivities(instIndex) {
+    // פונקציה לעריכת פרטי מוסד
+    function showEditInstitution(instIndex) {
       const institution = institutions[instIndex];
       const modal = document.getElementById('editModal');
       const form = document.getElementById('editForm');
       
-      let html = `
-        <h2>פעילויות עבור ${institution.name}</h2>
-        <button class="btn btn-add" onclick="showAddActivity(${instIndex})">הוסף פעילות חדשה</button>
-        <table>
-          <tr>
-            <th>תאריך</th>
-            <th>סוג פעילות</th>
-            <th>משתתפים</th>
-            <th>הערות</th>
-            <th>פעולות</th>
-          </tr>
+      form.innerHTML = `
+        <label>שם המוסד:</label>
+        <input type="text" id="editInstName" value="${institution.name}" required>
+        
+        <label>כתובת המוסד:</label>
+        <input type="text" id="editInstAddress" value="${institution.address}" required>
+        
+        <label>איש קשר:</label>
+        <input type="text" id="editInstContact" value="${institution.contact}" required>
+        
+        <label>מוביל קשר:</label>
+        <input type="text" id="editInstLeadContact" value="${institution.leadContact}" required>
+        
+        <label>טלפון:</label>
+        <input type="text" id="editInstPhone" value="${institution.phone}" required>
+        
+        <button class="btn btn-add" onclick="updateInstitution(${instIndex})">שמור</button>
+        <button class="btn" onclick="closeEditModal()">ביטול</button>
       `;
-    
-      institution.activities.forEach((activity, actIndex) => {
-        const formattedDate = new Date(activity.date).toLocaleDateString('he-IL');
-        html += `
-          <tr>
-            <td>${formattedDate}</td>
-            <td>${activity.type}</td>
-            <td>${activity.participants}</td>
-            <td>${activity.notes}</td>
-            <td>
-              <button class="btn btn-edit action-btn" onclick="showEditActivity(${instIndex}, ${actIndex})">ערוך</button>
-              <button class="btn btn-delete action-btn" onclick="deleteActivity(${instIndex}, ${actIndex})">מחק</button>
-            </td>
-          </tr>
-        `;
-      });
-    
-      html += `</table>
-        <button class="btn btn-delete" onclick="closeEditModal()">סגור</button>
-      `;
-    
-      form.innerHTML = html;
+      
       modal.style.display = 'block'; // הצגת המודל
     }
 
+    function updateInstitution(instIndex) {
+      const institution = institutions[instIndex];
+      
+      institution.name = document.getElementById('editInstName').value;
+      institution.address = document.getElementById('editInstAddress').value;
+      institution.contact = document.getElementById('editInstContact').value;
+      institution.leadContact = document.getElementById('editInstLeadContact').value;
+      institution.phone = document.getElementById('editInstPhone').value;
+      
+      closeEditModal();
+      saveData(); // שמירת השינויים ב-LocalStorage
+      showMainPage(true); // רענון העמוד הראשי
+    }
+
+    // פונקציה לסגירת מודל העריכה
     function closeEditModal() {
       const modal = document.getElementById('editModal');
       modal.style.display = 'none';
