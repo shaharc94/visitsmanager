@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>ניהול פעילויות במוסדות רפואיים</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f0f0f0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .btn-add { background: #28a745; }
+    .btn-edit { background: #ffc107; color: black; }
+    .btn-delete { background: #dc3545; }
+    .action-btn {
+      padding: 4px 8px;
+      font-size: 0.9em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+    }
+    th {
+      background: #f5f5f5;
+    }
+    .form-group {
+      margin: 10px 0;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .institution-card {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .section-title {
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+      margin: 30px 0 20px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ניהול פעילויות במוסדות רפואיים</h1>
+    <div id="adminCodeSection">
+      <label for="adminCode">הזן קוד מנהל:</label>
+      <input type="password" id="adminCode" placeholder="קוד מנהל">
+      <button class="btn" onclick="validateAdminCode()">אשר</button>
+    </div>
+    <div id="mainContent"></div> <!-- הצגת הנתונים כברירת מחדל -->
+  </div>
+
+  <!-- מודל לעריכת פרטי מוסד -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h2>עריכת מוסד רפואי</h2>
+      <div class="form-group" id="editForm"></div>
+    </div>
+  </div>
+
+  <script>
+    let institutions = [
+      {
+        name: 'בית לוינשטיין',
+        address: 'אחוזה 278, רעננה',
+        contact: 'דר כהן',
+        leadContact: 'פרופ׳ שרון',
+        phone: '09-1234567',
+        activities: [
+          {
+            id: 1,
+            date: '2024-11-15',
+            type: 'הרצאה',
+            participants: 'דר כהן, צוות שיקום',
+            notes: 'הרצאה בנושא שיקום'
+          }
+        ]
+      },
+      {
+        name: 'בית החולים תל השומר - המרכז לשיקום',
+        address: 'תל השומר, רמת גן',
+        contact: 'ד״ר אלי ברק',
+        leadContact: 'פרופ׳ יעל שוחט',
+        phone: '03-530-3030',
+        activities: []
+      },
+      {
+        name: 'המרכז לשיקום "רעות"',
+        address: 'גולומב 4, תל אביב',
+        contact: 'דר אמיר מזרחי',
+        leadContact: 'פרופ׳ מירי רוזנפלד',
+        phone: '03-6366000',
+        activities: []
+      },
+      {
+        name: 'מרכז רפואי שיקומי אלין',
+        address: 'הר הצופים, ירושלים',
+        contact: 'דר נועם שגיא',
+        leadContact: 'פרופ׳ תמר שפירא',
+        phone: '02-649-4222',
+        activities: []
+      },
+      {
+        name: 'שיקום יום איכילוב',
+        address: 'ויצמן 6, תל אביב',
+        contact: 'דר ירון שורץ',
+        leadContact: 'פרופ׳ ענת לביא',
+        phone: '03-697-4444',
+        activities: []
+      }
+    ];
+
+    let nextActivityId = 3; // מונה להקצאת מזהים ייחודיים לפעילויות
+
+    function validateAdminCode() {
+      const enteredCode = document.getElementById('adminCode').value;
+      
+      if (enteredCode === '12345') {
+        document.getElementById('adminCodeSection').style.display = 'none'; // הסתרת שדה קוד המנהל
+        showMainPage(true); // הצגת העמוד הראשי עם הרשאות ניהול
+      } else {
+        alert('קוד מנהל שגוי!');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadData(); // טוען את הנתונים השמורים
+      showMainPage(false); // הצגת הדף הראשי עבור משתמשים רגילים ללא הרשאות ניהול
+    });
+
+    function showMainPage(isAdmin) {
+      const content = document.getElementById('mainContent');
+      let html = `
+        ${isAdmin ? '<button class="btn btn-add" onclick="showAddInstitution()">הוסף מוסד חדש</button>' : ''}
+        <h2 class="section-title">פעילויות קרובות בכל המוסדות</h2>
+        <table>
+          <tr>
+            <th>תאריך</th>
+            <th>מוסד</th>
+            <th>סוג פעילות</th>
+            <th>משתתפים</th>
+            <th>הערות</th>
+            ${isAdmin ? '<th>פעולות</th>' : ''}
+          </tr>
+      `;
+
+      const allActivities = [];
+      institutions.forEach((inst, instIndex) => {
+        inst.activities.forEach((act, actIndex) => {
+          allActivities.push({
+            ...act,
+            institutionName: inst.name,
+            instIndex,
+            actIndex
+          });
+        });
+      });
+
+      allActivities.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      allActivities.forEach(act => {
+        const date = new Date(act.date);
+        const formattedDate = date.toLocaleDateString('he-IL');
+        html += `
+          <tr>
+            <td>${formattedDate}</td>
+            <td>${act.institutionName}</td>
+            <td>${act.type}</td>
+            <td>${act.participants}</td>
+            <td>${act.notes}</td>
+            ${isAdmin ? `
+            <td>
+              <button class="btn btn-edit action-btn" onclick="showEditActivity(${act.instIndex}, ${act.actIndex})">ערוך</button>
+              <button class="btn btn-delete action-btn" onclick="deleteActivity(${act.instIndex}, ${act.actIndex})">מחק</button>
+            </td>
+            ` : ''}
+          </tr>
+        `;
+      });
+
+      html += `</table>
+        <h2 class="section-title">מוסדות רפואיים</h2>
+      `;
+      
+      institutions.forEach((inst, i) => {
+        html += `
+          <div class="institution-card">
+            <h3>${inst.name}</h3>
+            <p>כתובת: ${inst.address}</p>
+            <p>איש קשר: ${inst.contact}</p>
+            <p>מוביל קשר: ${inst.leadContact}</p>
+            <p>טלפון: ${inst.phone}</p>
+            <button class="btn" onclick="showActivities(${i})">צפה בפעילויות</button>
+            ${isAdmin ? `<button class="btn btn-edit" onclick="showEditInstitution(${i})">ערוך פרטי מוסד</button>` : ''}
+            ${isAdmin ? `<button class="btn btn-delete" onclick="deleteInstitution(${i})">מחק מוסד</button>` : ''}
+          </div>
+        `;
+      });
+      
+      content.innerHTML = html;
+    }
+
+    // פונקציה לעריכת פרטי מוסד
+    function showEditInstitution(instIndex) {
+      const institution = institutions[instIndex];
+      const modal = document.getElementById('editModal');
+      const form = document.getElementById('editForm');
+      
+      form.innerHTML = `
+        <label>שם המוסד:</label>
+        <input type="text" id="editInstName" value="${institution.name}" required>
+        
+        <label>כתובת המוסד:</label>
+        <input type="text" id="editInstAddress" value="${institution.address}" required>
+        
+        <label>איש קשר:</label>
+        <input type="text" id="editInstContact" value="${institution.contact}" required>
+        
+        <label>מוביל קשר:</label>
+        <input type="text" id="editInstLeadContact" value="${institution.leadContact}" required>
+        
+        <label>טלפון:</label>
+        <input type="text" id="editInstPhone" value="${institution.phone}" required>
+        
+        <button class="btn btn-add" onclick="updateInstitution(${instIndex})">שמור</button>
+        <button class="btn" onclick="closeEditModal()">ביטול</button>
+      `;
+      
+      modal.style.display = 'block'; // הצגת המודל
+    }
+
+    function updateInstitution(instIndex) {
+      const institution = institutions[instIndex];
+      
+      institution.name = document.getElementById('editInstName').value;
+      institution.address = document.getElementById('editInstAddress').value;
+      institution.contact = document.getElementById('editInstContact').value;
+      institution.leadContact = document.getElementById('editInstLeadContact').value;
+      institution.phone = document.getElementById('editInstPhone').value;
+      
+      closeEditModal();
+      saveData(); // שמירת השינויים ב-LocalStorage
+      showMainPage(true); // רענון העמוד הראשי
+    }
+
+    // פונקציה לסגירת מודל העריכה
+    function closeEditModal() {
+      const modal = document.getElementById('editModal');
+      modal.style.display = 'none';
+    }
+
+    function updateActivity(instIndex, actIndex) {
+      const activity = institutions[instIndex].activities[actIndex];
+      
+      activity.date = document.getElementById('editDate').value;
+      activity.type = document.getElementById('editType').value;
+      activity.participants = document.getElementById('editParticipants').value;
+      activity.notes = document.getElementById('editNotes').value;
+      
+      closeEditModal();
+      saveData(); // שמירת השינויים
+      showMainPage(true); // רענון העמוד הראשי
+    }
+
+    function deleteActivity(instIndex, actIndex) {
+      if (confirm('האם אתה בטוח שברצונך למחוק פעילות זו?')) {
+        institutions[instIndex].activities.splice(actIndex, 1);
+        saveData(); // שמירת השינויים ב-LocalStorage
+        showMainPage(true); // הצגת הדף המעודכן
+      }
+    }
+
+    function deleteInstitution(instIndex) {
+      if (confirm('האם אתה בטוח שברצונך למחוק את המוסד? כל הפעילויות שלו יימחקו גם כן.')) {
+        institutions.splice(instIndex, 1); // מחיקת המוסד מהרשימה
+        saveData(); // שמירת השינויים ב-LocalStorage
+        showMainPage(true); // הצגת הדף המעודכן עם הרשאות ניהול
+      }
+    }
+
+    function showAddInstitution() {
+      const modal = document.getElementById('editModal');
+      const form = document.getElementById('editForm');
+      
+      form.innerHTML = `
+        <h2>הוספת מוסד רפואי חדש</h2>
+        <div class="form-group">
+          <label>שם המוסד:</label>
+          <input type="text" id="instName" required>
+          
+          <label>כתובת המוסד:</label>
+          <input type="text" id="instAddress" required>
+          
+          <label>איש קשר במוסד:</label>
+          <input type="text" id="instContact" required>
+          
+          <label>מוביל הקשר במוסד:</label>
+          <input type="text" id="instLeadContact" required>
+          
+          <label>טלפון של איש קשר:</label>
+          <input type="text" id="instPhone" required>
+          
+          <button class="btn btn-add" onclick="addInstitution()">הוסף מוסד</button>
+          <button class="btn" onclick="closeEditModal()">סגור</button>
+        </div>
+      `;
+      
+      modal.style.display = 'block'; // הצגת המודל
+    }
+
+    function addInstitution() {
+      const name = document.getElementById('instName').value;
+      const address = document.getElementById('instAddress').value;
+      const contact = document.getElementById('instContact').value;
+      const leadContact = document.getElementById('instLeadContact').value;
+      const phone = document.getElementById('instPhone').value;
+      
+      if (name && address && contact && leadContact && phone) {
+        institutions.push({
+          name,
+          address,
+          contact,
+          leadContact,
+          phone,
+          activities: []
+        });
+        saveData(); // שמירת השינויים ב-localStorage
+        closeEditModal(); // סגירת המודל
+        showMainPage(true); // רענון העמוד הראשי
+      } else {
+        alert('נא למלא את כל השדות');
+      }
+    }
+
+    function showAddActivity(instIndex) {
+      const modal = document.getElementById('editModal');
+      const form = document.getElementById('editForm');
+    
+      form.innerHTML = `
+        <h2>הוסף פעילות חדשה</h2>
+        <div class="form-group">
+          <label for="date">תאריך:</label>
+          <input type="date" id="date" required>
+        </div>
+        <div class="form-group">
+          <label for="type">סוג פעילות:</label>
+          <select id="type" required>
+            <option value="פגישה">פגישה</option>
+            <option value="הרצאה">הרצאה</option>
+            <option value="ביקור">ביקור</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="participants">משתתפים:</label>
+          <input type="text" id="participants" required>
+        </div>
+        <div class="form-group">
+          <label for="notes">הערות:</label>
+          <input type="text" id="notes">
+        </div>
+        <button class="btn btn-add" onclick="addActivity(${instIndex})">שמור</button>
+        <button class="btn btn-delete" onclick="closeEditModal()">סגור</button>
+      `;
+      
+      modal.style.display = 'block'; // הצגת המודל
+    }
+
+    function addActivity(instIndex) {
+      const date = document.getElementById('date').value;
+      const type = document.getElementById('type').value;
+      const participants = document.getElementById('participants').value;
+      const notes = document.getElementById('notes').value;
+    
+      if (date && type && participants) {
+        institutions[instIndex].activities.push({
+          id: nextActivityId++,
+          date,
+          type,
+          participants,
+          notes
+        });
+        saveData(); // שמירת הנתונים ב-localStorage
+        closeEditModal(); // סגירת המודל לאחר השמירה
+        showActivities(instIndex); // הצגת הפעילויות לאחר ההוספה
+      } else {
+        alert('נא למלא את כל השדות');
+      }
+    }
+
+    // שמירת הנתונים ב-LocalStorage
+    function saveData() {
+      localStorage.setItem('medicalInstitutions', JSON.stringify(institutions));
+      localStorage.setItem('nextActivityId', nextActivityId.toString());
+    }
+
+    // טעינת הנתונים מ-LocalStorage
+    function loadData() {
+      const savedInstitutions = localStorage.getItem('medicalInstitutions');
+      const savedNextActivityId = localStorage.getItem('nextActivityId');
+
+      if (savedInstitutions) {
+        institutions = JSON.parse(savedInstitutions); // שחזור רשימת המוסדות מה-localStorage
+      }
+
+      if (savedNextActivityId) {
+        nextActivityId = parseInt(savedNextActivityId); // שחזור מונה הפעילויות
+      }
+    }
+
+    // סגירת המודל כשלוחצים מחוץ לתוכן שלו
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
